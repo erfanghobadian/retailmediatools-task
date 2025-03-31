@@ -2,6 +2,7 @@ package service
 
 import (
 	"sort"
+	"time"
 
 	"sweng-task/internal/model"
 	"sweng-task/internal/utils"
@@ -31,22 +32,22 @@ func NewAdService(
 func (s *AdService) GetWinningAds(placement, category, keyword string, limit int) ([]model.Ad, error) {
 	s.log.Infow("Selecting winning ads", "placement", placement, "category", category, "keyword", keyword)
 
-	lineItems, err := s.fetchEligibleLineItems(placement, category, keyword)
+	lineItems, err := s.fetchMatchedLineItems(placement, category, keyword)
 	if err != nil {
 		return nil, err
 	}
 
-	scoredItems := s.applyDynamicBidding(lineItems, placement)
-	selected := s.scoreAndSelectTopAds(scoredItems, limit)
+	scoredItems := s.estimateBid(lineItems, placement)
+	selected := s.sortAndSelectAds(scoredItems, limit)
 
 	return s.mapToAds(selected), nil
 }
 
-func (s *AdService) fetchEligibleLineItems(placement, category, keyword string) ([]*model.LineItemEntity, error) {
+func (s *AdService) fetchMatchedLineItems(placement, category, keyword string) ([]*model.LineItemEntity, error) {
 	return s.lineItemService.FindMatchingLineItems(placement, category, keyword)
 }
 
-func (s *AdService) applyDynamicBidding(items []*model.LineItemEntity, placement string) []*model.LineItemEntity {
+func (s *AdService) estimateBid(items []*model.LineItemEntity, placement string) []*model.LineItemEntity {
 	globalEventCounts, _ := s.trackingService.GetEventCounts("", "")
 	placementEventCounts, _ := s.trackingService.GetEventCounts("", placement)
 
@@ -56,7 +57,7 @@ func (s *AdService) applyDynamicBidding(items []*model.LineItemEntity, placement
 		itemEventCounts, _ := s.trackingService.GetEventCounts(item.ID, "")
 		itemPlacementEventCounts, _ := s.trackingService.GetEventCounts(item.ID, placement)
 
-		dynamicBid := strategy.Calculate(
+		estimatedBid := strategy.Calculate(
 			item.Bid,
 			globalEventCounts,
 			placementEventCounts,
@@ -64,13 +65,13 @@ func (s *AdService) applyDynamicBidding(items []*model.LineItemEntity, placement
 			itemPlacementEventCounts,
 		)
 
-		item.Bid = dynamicBid
+		item.Bid = s.applyPacing(item, estimatedBid)
 	}
 
 	return items
 }
 
-func (s *AdService) scoreAndSelectTopAds(items []*model.LineItemEntity, limit int) []*model.LineItemEntity {
+func (s *AdService) sortAndSelectAds(items []*model.LineItemEntity, limit int) []*model.LineItemEntity {
 	sort.SliceStable(items, func(i, j int) bool {
 		return items[i].Bid > items[j].Bid
 	})
@@ -94,4 +95,31 @@ func (s *AdService) mapToAds(items []*model.LineItemEntity) []model.Ad {
 		})
 	}
 	return ads
+}
+
+func (s *AdService) applyPacing(item *model.LineItemEntity, bid float64) float64 {
+	if item.Budget == 0 {
+		return bid
+	}
+
+	currentHour := float64(time.Now().Hour())
+	pacingRatio := currentHour / 24.0
+	expectedSpending := pacingRatio * item.Budget
+
+	if item.DailySpending > expectedSpending {
+		reduceFactor := expectedSpending / item.DailySpending
+		adjustedBid := bid * reduceFactor
+
+		s.log.Infow("Pacing adjustment applied",
+			"line_item_id", item.ID,
+			"original_bid", bid,
+			"adjusted_bid", adjustedBid,
+			"daily_spending", item.DailySpending,
+			"expected_spending", expectedSpending,
+		)
+
+		return adjustedBid
+	}
+
+	return bid
 }

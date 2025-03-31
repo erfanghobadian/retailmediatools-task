@@ -20,11 +20,10 @@
    - Event-based tracking system
 
 
-3. **Dynamic Bidding System**
+3. ** Bidding System**
    - Applies dynamic bid scoring based on event performance data
    - Fetches and compares conversion rates at item, placement, and global levels
-   - Uses fallback strategy based on impression thresholds
-   - Supports configurable scoring modules (currently using conversion rate strategy)
+   - Added Pacing for keeping budget for last hours of day
 
 
 4. **Bid Scoring Strategy**

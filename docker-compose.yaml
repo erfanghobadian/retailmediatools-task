@@ -13,12 +13,45 @@ services:
       - APP_LOG_LEVEL=debug
       - SERVER_PORT=8080
       - SERVER_TIMEOUT=30s
+      - APP_DATABASE_HOST=postgres
+      - APP_DATABASE_PORT=5432
+      - APP_DATABASE_USER=postgres
+      - APP_DATABASE_PASSWORD=changeme
+      - APP_DATABASE_DATABASE=ad_bidding_db
     volumes:
       - ./data:/app/data
     restart: unless-stopped
+    networks:
+      - backend
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 5s
+    depends_on:
+      - postgres
+
+  postgres:
+    container_name: postgres_container
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: ad_bidding_db
+      PGDATA: /data/postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/data/postgres
+    networks:
+      - backend
+    restart: unless-stopped
+
+
+volumes:
+  postgres:
+
+networks:
+  backend:
+    driver: bridge

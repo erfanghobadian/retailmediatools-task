@@ -1,58 +1,43 @@
 package service
 
 import (
-	"errors"
-	"sync"
-	"time"
-
 	"sweng-task/internal/model"
+	"sweng-task/internal/repository"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-// Errors
-var (
-	ErrLineItemNotFound = errors.New("line item not found")
-)
-
 // LineItemService provides operations for line items
 type LineItemService struct {
-	items map[string]*model.LineItem
-	mu    sync.RWMutex
-	log   *zap.SugaredLogger
+	repo repository.LineItemRepository
+	log  *zap.SugaredLogger
 }
 
 // NewLineItemService creates a new LineItemService
-func NewLineItemService(log *zap.SugaredLogger) *LineItemService {
+func NewLineItemService(repo repository.LineItemRepository, log *zap.SugaredLogger) *LineItemService {
 	return &LineItemService{
-		items: make(map[string]*model.LineItem),
-		log:   log,
+		repo: repo,
+		log:  log,
 	}
 }
 
 // Create creates a new line item
-func (s *LineItemService) Create(item model.LineItemCreate) (*model.LineItem, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+func (s *LineItemService) Create(input model.LineItemCreate) (*model.LineItem, error) {
 	now := time.Now()
 
-	lineItem := &model.LineItem{
-		ID:           "li_" + uuid.New().String(),
-		Name:         item.Name,
-		AdvertiserID: item.AdvertiserID,
-		Bid:          item.Bid,
-		Budget:       item.Budget,
-		Placement:    item.Placement,
-		Categories:   item.Categories,
-		Keywords:     item.Keywords,
-		Status:       model.LineItemStatusActive,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	// Map to entity and populate defaults
+	lineItem := model.ToLineItemEntityFromCreate(input)
+	lineItem.ID = "li_" + uuid.New().String()
+	lineItem.CreatedAt = now
+	lineItem.UpdatedAt = now
+
+	// Save to DB
+	if err := s.repo.Create(&lineItem); err != nil {
+		return nil, err
 	}
 
-	s.items[lineItem.ID] = lineItem
 	s.log.Infow("Line item created",
 		"id", lineItem.ID,
 		"name", lineItem.Name,
@@ -60,88 +45,64 @@ func (s *LineItemService) Create(item model.LineItemCreate) (*model.LineItem, er
 		"placement", lineItem.Placement,
 	)
 
-	return lineItem, nil
+	// Convert to API response DTO
+	dto := model.ToDTOLineItem(lineItem)
+	return &dto, nil
 }
 
 // GetByID retrieves a line item by ID
 func (s *LineItemService) GetByID(id string) (*model.LineItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	item, exists := s.items[id]
-	if !exists {
+	item, err := s.repo.GetByID(id)
+	if err != nil {
 		return nil, ErrLineItemNotFound
-	}
 
-	return item, nil
+	}
+	dto := model.ToDTOLineItem(*item)
+	return &dto, nil
 }
 
 // GetAll retrieves all line items, optionally filtered by advertiser ID and placement
 func (s *LineItemService) GetAll(advertiserID, placement string) ([]*model.LineItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	var result []*model.LineItem
-
-	for _, item := range s.items {
-		if advertiserID != "" && item.AdvertiserID != advertiserID {
-			continue
-		}
-
-		if placement != "" && item.Placement != placement {
-			continue
-		}
-
-		result = append(result, item)
+	entityItems, err := s.repo.GetAll(advertiserID, placement)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	var dtoItems []*model.LineItem
+	for _, entityItem := range entityItems {
+		dto := model.ToDTOLineItem(*entityItem)
+		dtoItems = append(dtoItems, &dto)
+	}
+
+	return dtoItems, nil
 }
 
 // FindMatchingLineItems finds line items matching the given placement and filters
 // This method will be used by the AdService when implementing the ad selection logic
-func (s *LineItemService) FindMatchingLineItems(placement string, category, keyword string) ([]*model.LineItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	var result []*model.LineItem
-
-	for _, item := range s.items {
-		// Skip items not matching the placement or not active
-		if item.Placement != placement || item.Status != model.LineItemStatusActive {
-			continue
-		}
-
-		// Apply category filter if specified
-		if category != "" {
-			categoryFound := false
-			for _, cat := range item.Categories {
-				if cat == category {
-					categoryFound = true
-					break
-				}
-			}
-			if !categoryFound {
-				continue
-			}
-		}
-
-		// Apply keyword filter if specified
-		if keyword != "" {
-			keywordFound := false
-			for _, kw := range item.Keywords {
-				if kw == keyword {
-					keywordFound = true
-					break
-				}
-			}
-			if !keywordFound {
-				continue
-			}
-		}
-
-		result = append(result, item)
+func (s *LineItemService) FindMatchingLineItems(placement string, category, keyword string) ([]*model.LineItemEntity, error) {
+	entityItems, err := s.repo.FindMatchingLineItems(placement, category, keyword)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, nil
+	return entityItems, nil
+}
+
+func (s *LineItemService) ResetDailySpending() error {
+	err := s.repo.ResetDailySpending()
+	if err != nil {
+		s.log.Errorw("ResetDailySpending failed", "error", err)
+		return err
+	}
+
+	s.log.Info("✅ Daily budgets reset successfully")
+	return nil
+}
+
+func (s *LineItemService) IncreaseDailySpending(lineItemID string, costPerEvent float64) error {
+	if err := s.repo.IncreaseDailySpending(lineItemID, costPerEvent); err != nil {
+		s.log.Errorw("Failed to increase daily spending", "line_item_id", lineItemID, "error", err)
+		return err
+	}
+	return nil
 }

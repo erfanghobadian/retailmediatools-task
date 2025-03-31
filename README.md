@@ -1,5 +1,85 @@
 # Software Engineering Task: Ad Bidding Service
 
+
+## Implementation Status
+
+### Completed Features
+
+
+1. **Line Item Management**
+   - Line item creation endpoint with validation
+   - In-memory repository implementation
+   - Comprehensive unit tests for handlers
+   - Input validation using custom validators
+
+
+2. **Tracking System**
+   - Tracking endpoint for recording ad interactions
+   - Mock repository implementation for testing
+   - Unit tests for tracking handlers
+   - Event-based tracking system
+
+
+3. **Dynamic Bidding System**
+   - Applies dynamic bid scoring based on event performance data
+   - Fetches and compares conversion rates at item, placement, and global levels
+   - Uses fallback strategy based on impression thresholds
+   - Supports configurable scoring modules (currently using conversion rate strategy)
+
+
+4. **Bid Scoring Strategy**
+   - Implements modular scoring via strategy pattern
+   - Uses `AvgConversionRateStrategy` to determine effective bid per Ad
+   - Applies max/min bid constraints using normalized conversion rates
+
+
+5. **Budget Tracking**
+   - Coordinates with `LineItemService` to reduce daily budget per ad served (CPM-based)
+
+
+6. **Extensibility**
+   - Decoupled from repository layer via service and strategy abstractions
+   - Designed to plug in future scoring strategies (CTR-based, ML-based, hybrid)
+
+
+7. **Testing Infrastructure**
+   - Mock repositories for testing
+   - Test utilities package
+   - Comprehensive unit tests for handlers
+   - Test data fixtures
+
+
+### Future Improvements
+
+1. **Performance Optimizations**
+   - Implement Redis caching for frequently accessed event analytics (impressions, clicks, conversions)
+   - Integrate ClickHouse for high-throughput tracking event storage and real-time analytics
+   - Adding DB indexing to improve queries
+   
+
+2. **Scoring System Enhancements**
+   - Introduce composite bidding strategies (e.g., CTR +  conversion-rate based)
+   - Integrate user behavior signals into ad scoring
+   - Implement A/B testing for scoring strategies
+
+
+3. **Scalability Improvements**
+   - Introduce distributed caching using Redis Cluster
+   - Use message queues (e.g., Kafka) for async tracking event ingestion
+
+
+4. **Monitoring and Observability**
+   - Expose Prometheus-compatible metrics for request counts, latencies, and event volume
+   - Configure alerting on key failure conditions (e.g., budget reset failures)
+
+
+5. **Security Enhancements**
+   - Implement authentication
+   - Add advertiser-level rate limiting to prevent abuse
+
+
+
+
 ## Overview
 
 You are tasked with extending an ad bidding service responsible for managing and serving advertisements.

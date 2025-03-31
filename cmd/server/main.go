@@ -4,17 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sweng-task/internal/app"
 	"syscall"
 
-	"sweng-task/internal/config"
-	"sweng-task/internal/handler"
-	"sweng-task/internal/service"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/recover"
 	"go.uber.org/zap"
+	"sweng-task/internal/config"
 )
 
 func main() {
@@ -39,45 +33,13 @@ func main() {
 		"server_port", cfg.Server.Port,
 	)
 
-	// Initialize services
-	lineItemService := service.NewLineItemService(log)
-	// Note: AdService implementation is left for the candidate
-
-	// Setup Fiber app
-	app := fiber.New(fiber.Config{
-		AppName:      "Ad Bidding Service",
-		ReadTimeout:  cfg.Server.Timeout,
-		WriteTimeout: cfg.Server.Timeout,
-		IdleTimeout:  cfg.Server.Timeout,
-	})
-
-	// Register middleware
-	app.Use(recover.New())
-	app.Use(fiberlogger.New())
-	app.Use(cors.New())
-
-	// Register routes
-	app.Get("/health", handler.HealthCheck)
-
-	api := app.Group("/api/v1")
-
-	// Line Item endpoints
-	lineItemHandler := handler.NewLineItemHandler(lineItemService, log)
-	api.Post("/lineitems", lineItemHandler.Create)
-	api.Get("/lineitems", lineItemHandler.GetAll)
-	api.Get("/lineitems/:id", lineItemHandler.GetByID)
-
-	// Ad endpoints - TO BE IMPLEMENTED BY CANDIDATE
-	// api.Get("/ads", adHandler.GetWinningAds)
-
-	// Tracking endpoint - TO BE IMPLEMENTED BY CANDIDATE
-	// api.Post("/tracking", trackingHandler.TrackEvent)
+	fiberApp := app.SetupApp(cfg, log)
 
 	// Start server
 	go func() {
 		address := fmt.Sprintf(":%d", cfg.Server.Port)
 		log.Infof("Starting server on %s", address)
-		if err := app.Listen(address); err != nil {
+		if err := fiberApp.Listen(address); err != nil {
 			log.Fatalf("Error starting server: %v", err)
 		}
 	}()
@@ -88,7 +50,7 @@ func main() {
 	<-quit
 	log.Info("Shutting down server...")
 
-	if err := app.Shutdown(); err != nil {
+	if err := fiberApp.Shutdown(); err != nil {
 		log.Fatalf("Error shutting down server: %v", err)
 	}
 

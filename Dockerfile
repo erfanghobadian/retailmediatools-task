@@ -25,6 +25,7 @@ WORKDIR /app
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /go/bin/adserver /app/adserver
+COPY --from=builder /app/db/migrations /app/db/migrations
 
 # Create a non-root user to run the application
 RUN adduser -D appuser && \

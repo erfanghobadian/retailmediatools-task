@@ -8,8 +8,9 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	App    AppConfig    `split_words:"true"`
-	Server ServerConfig `split_words:"true"`
+	App      AppConfig      `split_words:"true"`
+	Server   ServerConfig   `split_words:"true"`
+	Database DatabaseConfig `split_words:"true"`
 }
 
 // AppConfig contains application-specific configuration
@@ -24,6 +25,14 @@ type AppConfig struct {
 type ServerConfig struct {
 	Port    int           `default:"8080"`
 	Timeout time.Duration `default:"30s"`
+}
+
+type DatabaseConfig struct {
+	Host     string `split_words:"true"`
+	Port     int    `split_words:"true"`
+	User     string `split_words:"true"`
+	Password string `split_words:"true"`
+	Database string `split_words:"true"`
 }
 
 // Load loads the configuration from environment variables

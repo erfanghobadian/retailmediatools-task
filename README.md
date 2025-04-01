@@ -56,6 +56,7 @@
 - Add additional strategies (CTR, hybrid, ML-based)
 - Integrate A/B testing to compare strategy effectiveness
 - Support weighted scoring combining multiple signals
+- Add Scoring based on Category and Keyword 
 
 ---
 

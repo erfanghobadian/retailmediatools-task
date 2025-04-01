@@ -3,78 +3,106 @@
 
 ## Implementation Status
 
-### Completed Features
+##  Features & Improvements
 
+### 1. Line Item Management
+**Completed:**
+- API endpoint for creating line items with comprehensive validation
+- Added repository style for db to make change easy
+- Added validation rules for all inputs
+- Unit test of handler logic
+- Using postgres with some indexes
 
-1. **Line Item Management**
-   - Line item creation endpoint with validation
-   - In-memory repository implementation
-   - Comprehensive unit tests for handlers
-   - Input validation using custom validators
+**Future Improvements:**
+- Add More db indexes
+- Introduce admin controls for managing line item lifecycle (pause, archive)
 
+---
 
-2. **Tracking System**
-   - Tracking endpoint for recording ad interactions
-   - Mock repository implementation for testing
-   - Unit tests for tracking handlers
-   - Event-based tracking system
+### 2. Tracking System
+**Completed:**
+- Endpoint for recording ad interaction events (impression, click, conversion)
+- Event normalization and validation
+- Test-friendly mock repository implementation
+- Event storage structured for future analytics
 
+**Future Improvements:**
+- Store events in ClickHouse for real-time analytical queries
+- Use Redis to cache/save aggregated counts for fast scoring
+- Add support for batch event ingestion via Kafka
+- Add rate-limiting and authentication to prevent abuse
 
-3. ** Bidding System**
-   - Applies dynamic bid scoring based on event performance data
-   - Fetches and compares conversion rates at item, placement, and global levels
-   - Added Pacing for keeping budget for last hours of day
+---
 
+### 3. Bidding System
+**Completed:**
+- Dynamic bid estimation per ad based on real-time conversion data
+- Multi-level performance analysis: item, placement, and global scope
+- Built-in pacing logic to prevent early budget exhaustion
 
-4. **Bid Scoring Strategy**
-   - Implements modular scoring via strategy pattern
-   - Uses `AvgConversionRateStrategy` to determine effective bid per Ad
-   - Applies max/min bid constraints using normalized conversion rates
+**Future Improvements:**
+- Add overspending prevention (budget reservation)
+- Support for predictive bidding based on ML models
+- Make pacing configurable per advertiser or campaign
 
+---
 
-5. **Budget Tracking**
-   - Coordinates with `LineItemService` to reduce daily budget per ad served (CPM-based)
+### 4. Bid Scoring Strategy
+**Completed:**
+- Modular scoring system via the Strategy pattern
+- Normalized score-to-bid mapping with min/max bounds
 
+**Future Improvements:**
+- Add additional strategies (CTR, hybrid, ML-based)
+- Integrate A/B testing to compare strategy effectiveness
+- Support weighted scoring combining multiple signals
 
-6. **Extensibility**
-   - Decoupled from repository layer via service and strategy abstractions
-   - Designed to plug in future scoring strategies (CTR-based, ML-based, hybrid)
+---
 
+### 5. Budget Tracking
+**Completed:**
+- Tracks daily spending (CPM-based) for each line item
+- Deducts budget on impression events
+- Daily reset via scheduled job (cron)
 
-7. **Testing Infrastructure**
-   - Mock repositories for testing
-   - Test utilities package
-   - Comprehensive unit tests for handlers
-   - Test data fixtures
+**Future Improvements:**
+- Adding db transaction for event recording and spending increase
+- Audit logs of spending per line item
+- Metrics endpoint for budget trends and burn rate
 
+---
 
-### Future Improvements
+### 6. Extensibility & Architecture
+**Completed:**
+- Clean separation of concerns via services and interfaces
+- Strategy-based scoring allows for easy integration of CTR/ML-based models
+- Designed for plug-and-play repository implementations (e.g., SQL, NoSQL, in-memory)
 
-1. **Performance Optimizations**
-   - Implement Redis caching for frequently accessed event analytics (impressions, clicks, conversions)
-   - Integrate ClickHouse for high-throughput tracking event storage and real-time analytics
-   - Adding DB indexing to improve queries
-   
+**Future Improvements:**
+- Modularize components for deployment as microservices
 
-2. **Scoring System Enhancements**
-   - Introduce composite bidding strategies (e.g., CTR +  conversion-rate based)
-   - Integrate user behavior signals into ad scoring
-   - Implement A/B testing for scoring strategies
+---
 
+### 7. Testing Infrastructure
+**Completed:**
+- Isolated unit tests for handler
+- Reusable test utilities and fixtures
+- Mocked repositories for clean service-level testing
 
-3. **Scalability Improvements**
-   - Introduce distributed caching using Redis Cluster
-   - Use message queues (e.g., Kafka) for async tracking event ingestion
+**Future Improvements:**
+- Add strategy and pacing tests
+- Full end-to-end tests for ad selection flow
+- Use CI workflows to enforce test coverage thresholds
 
+---
 
-4. **Monitoring and Observability**
-   - Expose Prometheus-compatible metrics for request counts, latencies, and event volume
-   - Configure alerting on key failure conditions (e.g., budget reset failures)
-
-
-5. **Security Enhancements**
-   - Implement authentication
-   - Add advertiser-level rate limiting to prevent abuse
+### 8. Monitoring, Observability, and Security
+**Future Work (Planned Across Features):**
+- Prometheus metrics and Grafana dashboards
+- Structured JSON logs with trace IDs
+- Alerting on pacing budget overruns
+- Authentication and advertiser-specific rate limiting
+- Fraud detection using anomaly-based rules
 
 
 

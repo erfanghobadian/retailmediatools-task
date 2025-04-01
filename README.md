@@ -3,6 +3,17 @@
 
 ## Implementation Status
 
+
+## Assumptions
+
+- There is no huge delay between bidding and impression sending otherwise it might get overspent
+- it is a hiring task and performance is not at the best level otherwise there are way more better data fetching using redis or ...
+- There is no feature for analytics of events 
+- Overengineering is prohibited in the hiring task 
+- We can have later discussion about future optimisations and issues with my approach
+
+
+
 ##  Features & Improvements
 
 ### 1. Line Item Management

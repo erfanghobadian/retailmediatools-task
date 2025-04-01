@@ -47,7 +47,7 @@ func (r *LineItemPostgresRepository) GetAll(advertiserID, placement string) ([]*
 func (r *LineItemPostgresRepository) FindMatchingLineItems(placement, category, keyword string) ([]*model.LineItemEntity, error) {
 	var items []*model.LineItemEntity
 
-	query := r.db.Where("placement = ? AND status = ? AND daily_budget_remaining >= bid", placement, "active")
+	query := r.db.Where("placement = ? AND status = ? AND daily_spending < budget", placement, "active")
 
 	if category != "" {
 		query = query.Where("? = ANY(categories)", category)
